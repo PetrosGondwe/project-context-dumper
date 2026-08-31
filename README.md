@@ -1,250 +1,980 @@
+# Updated README.md
+
+Below is the complete, production‑ready `README.md` file. I've preserved the excellent structure from your draft, updated it to match the current state of the application (light Rufus‑style theme, sidebar navigation, three‑mode system, interactive settings, custom icon), and added appropriate screenshot placeholders.
+
+---
+
+```markdown
 # Project Context Dumper
+
+> **Turn entire project directories and PDF collections into clean, AI‑ready context — locally, safely, and reproducibly.**
+
+**Project Context Dumper** is a desktop application and command‑line tool for consolidating source code and PDF documents into structured UTF‑8 text that can be supplied to AI assistants as project context, used for code reviews, documentation, debugging, archival snapshots, or automated workflows.
+
+Instead of manually opening dozens or hundreds of files and copying their contents, point Project Context Dumper at a directory and let it build a single, organized context document.
 
 ![Main window](docs/screenshot_main.png)
 
-A desktop app (and CLI) that consolidates a project's **source code** and/or
-a collection of **PDF documents** into a single UTF‑8 text file — the kind
-of thing you feed to an AI assistant as background context, or keep as a
-point‑in-time archive/review artifact.
+---
 
-Drop a folder onto the window (or pick one with a button), the app
-auto-detects whether it's a source-code project, a PDF collection, or a mix
-of both, and writes one clean `.txt` file with a directory tree followed by
-every file's contents.
+## ✨ Highlights
+
+* 🖥️ **Modern, light‑weight desktop GUI** built with PySide6 (Rufus‑style design)
+* ⌨️ **Full CLI** for automation, CI, scripting, and headless environments
+* 📁 **Recursive project scanning**
+* 💻 **Source‑code collection**
+* 📄 **PDF text extraction**
+* 🔀 **Three‑mode system:** Auto Detect, CodeBase, Research
+* 🧠 **LLM‑friendly structured output**
+* 📦 **Optional output chunking** for large context documents
+* 📊 **Character count and token estimation**
+* ⚡ **Streaming output architecture**
+* 🛑 **Cooperative cancellation**
+* 🔗 **Symlink‑cycle protection**
+* 🛡️ **Binary‑file detection**
+* 🔤 **Non‑UTF‑8 source handling**
+* 🚫 **Configurable directory and file exclusions** (interactive checklists)
+* 👻 **Hidden‑file controls**
+* 🔐 **Safe overwrite protection**
+* 🧹 **Temporary‑file cleanup on cancellation/failure**
+* 🧪 **Comprehensive automated test suite**
+* 🪟 **Windows‑friendly standalone executable support**
+* 🎨 **Custom application icon**
 
 ---
 
-## Why this exists
+## 🎯 Why Project Context Dumper?
 
-This started from two ad-hoc PowerShell/Python one-off scripts (dump source
-tree → txt, dump PDF text → txt). This project turns that into an actual
-application: a GUI, a config system, a background thread so the UI never
-freezes, and — the bulk of the engineering effort — **a scanner and two
-writers that have been hardened against the many ways a real filesystem and
-real PDFs go wrong.**
+Large software projects are difficult to provide as context to an AI assistant.
 
-## Install
+A typical project might contain:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate        # .venv\Scripts\activate on Windows
-pip install -r requirements.txt
-# optional, better encoding detection for non-UTF-8 source files:
-pip install -r requirements-optional.txt
+```text
+my-project/
+├── src/
+│   ├── main.py
+│   ├── api.py
+│   └── services/
+├── tests/
+├── docs/
+├── config/
+├── README.md
+└── architecture.pdf
 ```
 
-Requires Python 3.9+.
+Manually collecting useful context from that project is tedious and error‑prone.
 
-## Run
+Project Context Dumper transforms it into a structured document such as:
 
-**GUI:**
-```bash
-python main.py
+```text
+================================================================================
+PROJECT CONTEXT DUMP: my-project
+Source path : C:\Projects\my-project
+Generated   : 2026-08-31 21:19:04
+Mode        : mixed
+================================================================================
+
+################################################################################
+# SECTION 1: SOURCE CODE
+################################################################################
+
+--- FILE: src/main.py ---
+
+...
+
+--- FILE: src/api.py ---
+
+...
+
+################################################################################
+# SECTION 2: PDF DOCUMENTS
+################################################################################
+
+--- FILE: docs/architecture.pdf ---
+
+--- Page 1/12 ---
+
+...
+
+================================================================================
+SKIPPED / WARNINGS (2)
+================================================================================
+
+- node_modules/... : excluded directory
+- binary.dat : file appears to be binary, not text
 ```
 
-**CLI** (for automation, CI, or headless boxes without a display):
-```bash
-python -m app.cli /path/to/project -o out.txt
-python -m app.cli /path/to/project --mode pdf --overwrite
-python -m app.cli --help
-```
-
-## Package as a standalone executable
-
-```bash
-pip install pyinstaller
-pyinstaller pyinstaller.spec
-# -> dist/ProjectContextDumper  (or .exe / .app)
-```
+The result is designed to be easy for both humans and AI systems to understand.
 
 ---
 
-## Architecture
+# 🚀 Features
 
+## Source‑code collection
+
+Project Context Dumper detects supported source files based on configurable extensions and filenames.
+
+The default configuration is designed to collect useful project context while avoiding common generated or low‑value files.
+
+Examples include:
+
+```text
+.py
+.js
+.ts
+.jsx
+.tsx
+.java
+.c
+.cpp
+.h
+.hpp
+.cs
+.go
+.rs
+.php
+.rb
+.swift
+.kt
+.kts
+.sh
+.bash
+.ps1
+.html
+.css
+.scss
+.sql
+.md
+.yaml
+.yml
+.toml
+.xml
+.json
 ```
-app/
-  config.py          Config dataclass: excludes, extensions, size limits,
-                      hidden/symlink policy. JSON-persisted per-OS.
-  detector.py         scan_directory(): ONE filesystem walk that classifies
-                      every file as source / pdf / ignored, and records
-                      every structural problem (permissions, broken
-                      symlinks, cycles, depth) as a SkipRecord instead of
-                      raising.
-  source_dumper.py    Streams the "source code" section straight into the
-                      output file handle: builds the tree, then per file
-                      does binary-sniffing, size-limiting, and a UTF-8 ->
-                      UTF-8-sig -> charset-normalizer -> replace-errors
-                      decode ladder.
-  pdf_dumper.py       Streams the "PDF" section: per-file AND per-page
-                      try/except (pdfplumber), encrypted/corrupt/0-page/
-                      empty-file handling, and cache-flushing so huge PDFs
-                      don't balloon memory.
-  dumper.py           run_dump(): the public API. Resolves AUTO/SOURCE/
-                      PDF/MIXED mode, streams into an atomic, optionally
-                      chunked writer — a crash or cancellation never
-                      corrupts a previous good dump.
-  output_writer.py    ChunkedDumpWriter: character counting, optional
-                      size-based rotation into `_partN_ofM` files (only
-                      ever between whole files), and atomic finalize/
-                      cleanup including detection of stale leftover parts
-                      from a differently-sized previous run.
-  worker.py           QObject + moveToThread wrapper so the GUI thread
-                      never blocks.
-  gui.py              PySide6 window: drag-and-drop, folder picker, mode
-                      selector, an embedded Settings page (a QStackedWidget
-                      page swap, not a separate popup window), progress
-                      bar, cancel, "open containing folder", "copy to
-                      clipboard", and a Help → About dialog.
-  cli.py              argparse-based headless interface, same engine, plus
-                      `--stdout` (clean, pipeable output) and
-                      `--max-chunk-chars` / `--chunk-for`.
-tests/                79 tests covering the engine end-to-end (see below).
+
+The exact list is configurable via the interactive Settings page.
+
+---
+
+## 📄 PDF extraction
+
+PDF files can be processed alongside source code or independently.
+
+Project Context Dumper uses `pdfplumber` to extract text from PDFs while handling failures at both the file and page level.
+
+For example:
+
+```text
+--- FILE: documentation.pdf ---
+
+--- Page 1/25 ---
+
+Introduction...
+
+--- Page 2/25 ---
+
+Architecture...
+
+...
 ```
 
-Both the GUI and the CLI are thin shells around `dumper.run_dump()` — there
-is exactly one code path that actually reads the filesystem and writes the
-output, so behavior is identical whether you use a mouse or a script.
+A corrupt PDF or malformed page does not necessarily abort the entire run.
 
-### Why PySide6 instead of PyQt5
+Password‑protected or encrypted PDFs are reported instead of silently producing incomplete content.
 
-The original design sketch suggested PyQt5. This build uses **PySide6**
-(Qt 6, official Qt-for-Python bindings) instead: it's LGPL-licensed, so this
-tool (or anything built on it) can be distributed without a commercial Qt
-license or GPL copyleft obligations, and it gets Qt 6's rendering/HiDPI
-improvements for free.
+---
 
-### Visual design
+## 🔀 Three‑Mode System
 
-The look is deliberately not a generic SaaS skin — the tool's entire job is
-turning a sprawling project into one precise document, so the interface
-borrows from technical drawings: a deep blueprint-navy base, a single brass
-accent used only for primary actions and highlights, flat zero-radius
-controls (no cards, no drop shadows, no gradients), and a monospace face
-reserved for anything that's genuinely path/code-like — the folder path,
-the output field, the exclude/extension lists, and the results readout —
-rather than used decoratively. Settings are grouped into labeled sections
-(Exclusions, Size Limits, Traversal, Output Splitting) instead of one long
-scrolling form. Tokens and rationale live in `app/theme.py`.
+The application supports three processing modes:
+
+| Mode        | Description                                                                 |
+| ----------- | --------------------------------------------------------------------------- |
+| `Auto Detect` | Automatically chooses source, PDF, or mixed mode based on folder contents |
+| `CodeBase`  | Processes source files only (ignores PDFs if present)                       |
+| `Research`  | Processes PDF files only (ignores source files if present)                  |
+
+With `Auto Detect`, the application determines the appropriate mode from the files discovered during scanning. If both source files and PDFs exist, it processes both.
+
+---
+
+# 🖥️ Desktop Application (GUI)
+
+The GUI provides:
+
+* Folder selection (button or drag‑and‑drop)
+* **Rufus‑style light theme** – maximizes readability with high contrast
+* **Sidebar navigation** – Dash Board, Settings, About
+* **Processing mode selection** – Auto Detect, CodeBase, Research
+* **Configurable exclusions** – interactive checklists
+* Hidden‑file controls
+* Symlink controls
+* File‑size limits
+* PDF‑size limits
+* Output chunking
+* **Progress bar with percentage**
+* Cancellation
+* Output summary
+* Open‑output‑folder functionality
+* Clipboard copying for single‑file results
+* Persistent settings
+
+Processing runs in a background Qt worker thread so large projects do not intentionally block the main GUI event loop.
 
 ![Settings page](docs/screenshot_settings.png)
 
 ---
 
-## Edge cases handled (and why each matters)
+# ⌨️ Command‑Line Interface
 
-| Category | Handling |
-|---|---|
-| **Re-running on the same project** | Previous `*_context_utf8.txt` output files are excluded from the scan by glob pattern *and* the exact current output/temp path is excluded by resolved path — re-running never recursively ingests an earlier dump. |
-| **Crash / cancel mid-write** | Output is written to `<name>.tmp` first; only `os.replace()`d to the final name on success. A cancelled or crashed run leaves the *previous* good output untouched and cleans up its own temp file. |
-| **Symlink cycles** | A symlinked directory pointing back at an ancestor (directly or via a chain) is detected via a visited-real-path set and skipped with a reason, instead of hanging forever. |
-| **Symlinked dirs by default** | Not followed by default (matches `os.walk`'s safe default); opt-in via Settings / `--follow-symlinks`, cycle-safe either way. |
-| **Broken symlinks** | `DirEntry.is_dir()` silently swallows the stat error for a dangling symlink and returns `False` — this is explicitly detected and reported as "broken symlink" rather than being misread as a normal (unreadable) file. |
-| **Permission-denied directories** | Caught per-directory; that subtree is skipped and noted, the rest of the scan continues. |
-| **Directory disappears mid-scan** | `FileNotFoundError` from a TOCTOU race is caught, not fatal. |
-| **Pathological deep nesting** | Iterative (stack-based) traversal — never hits Python's recursion limit — plus a configurable `max_depth` circuit-breaker. |
-| **Binary files with a "text" extension** | First 8 KB sniffed for null bytes / high non-text-byte ratio before reading; skipped with a note rather than dumping garbage. |
-| **Oversized files** | Per-file (default 2 MB) and per-PDF (default 300 MB) size ceilings, configurable; oversized files are skipped with the actual size shown, not silently truncated. |
-| **Non-UTF-8 source files** | Decode ladder: UTF-8 → UTF-8-with-BOM → `charset-normalizer` (if installed) → UTF-8 with `errors='replace'` as a last resort — each fallback is annotated in the output so it's clear where the text may be imperfect. |
-| **Lockfiles / generated files** | `package-lock.json`, `yarn.lock`, `poetry.lock`, etc. excluded by default (huge, near-zero value as AI context); fully configurable in Settings. |
-| **Hidden files/dirs** | Excluded by default; `.gitignore`/`.editorconfig`/etc. are explicitly whitelisted even while hidden-exclusion is on; a checkbox/flag re-enables all dotfiles. |
-| **Encrypted / password-protected PDFs** | Detected from the underlying error and reported clearly instead of crashing the whole run. |
-| **Corrupt / non-PDF-despite-extension files** | Caught at `pdfplumber.open()`; reported per-file, rest of the batch continues. |
-| **One bad page in an otherwise-good PDF** | Page-level try/except — a single malformed page is reported inline; the other 500 pages still extract normally. |
-| **0-page / 0-byte PDFs** | Explicitly detected and reported rather than raising deep inside pdfplumber. |
-| **Large multi-hundred-page PDFs** | `page.flush_cache()` after each page to bound memory growth. |
-| **Huge repos (memory)** | Nothing is ever built as one giant in-memory string — both dumpers stream directly into the open output file handle. |
-| **Output path is a directory / unwritable / already exists** | Each is checked explicitly with a clear error before any work starts; existing-file requires an explicit overwrite (confirmed in the GUI, `--overwrite` flag in the CLI). |
-| **Nothing found at all** | Clear `NoSupportedFilesError` instead of silently writing an empty/near-empty file. |
-| **Corrupt settings file** | `Config.load()` falls back to defaults on any JSON/type error rather than crashing app startup. |
-| **User cancels mid-run** | Cooperative cancellation via a `threading.Event` checked between every file (and every PDF page); GUI and CLI both surface it as "cancelled", not an error. |
-| **Closing the GUI mid-run** | Confirms with the user, cancels the worker, waits for the background thread to actually stop before the window closes (verified with a real `QApplication.exec()` lifecycle — no "thread destroyed while running" issues). |
-| **Dropping the wrong thing on the drop zone** | Multiple folders, individual files, or non-local URLs are rejected with a specific message rather than silently doing the wrong thing. |
-| **Chunked output re-run producing fewer parts than before** | Stale leftover parts from a larger previous run (e.g. old `_part3_of_3.txt` when this run only makes 2 parts) are detected and cleaned up during finalize, never orphaned. |
-| **`--stdout` mixed with progress/summary output** | All diagnostics move to stderr in this mode; stdout carries only the dump text, so `... --stdout \| pbcopy` never picks up a progress bar or summary line by accident. |
-| **Chunk size smaller than a single file** | A file's content is never split mid-write — only checkpointed between files — so a part may legitimately exceed the requested chunk size when one file is larger than the limit. |
+The CLI is useful for:
 
-All of the above (except the couple of GUI-specific rows) are covered by
-automated tests, including real symlink loops, real permission-denied
-directories (run as a non-root user), a real corrupt PDF, and a real
-Latin‑1-encoded source file — not just mocked-out assumptions.
+* Automation
+* CI/CD
+* Batch processing
+* Build systems
+* Scripts
+* Remote machines
+* Headless environments
 
-## Testing
+### Basic usage
+
+```bash
+python -m app.cli /path/to/project -o out.txt
+```
+
+### Automatic mode
+
+```bash
+python -m app.cli /path/to/project
+```
+
+### CodeBase mode (source only)
+
+```bash
+python -m app.cli /path/to/project --mode source
+```
+
+### Research mode (PDF only)
+
+```bash
+python -m app.cli /path/to/project --mode pdf
+```
+
+### Allow overwriting an existing output
+
+```bash
+python -m app.cli /path/to/project -o out.txt --overwrite
+```
+
+### View all CLI options
+
+```bash
+python -m app.cli --help
+```
+
+---
+
+# 📋 Clean stdout mode
+
+For automation and piping, the CLI supports `--stdout`.
+
+Only the generated dump is written to stdout; progress and diagnostic information are redirected to stderr.
+
+### Windows
+
+```bash
+python -m app.cli . --stdout | clip
+```
+
+### macOS
+
+```bash
+python -m app.cli . --stdout | pbcopy
+```
+
+### Linux
+
+```bash
+python -m app.cli . --stdout | xclip -selection clipboard
+```
+
+You can also redirect directly to a file:
+
+```bash
+python -m app.cli . --stdout > context.txt
+```
+
+`--stdout` and chunked output are mutually exclusive.
+
+---
+
+# 📦 Large‑output chunking
+
+Large projects can produce context documents that are too large to paste into an AI chat in one operation.
+
+Project Context Dumper can split the output into numbered parts:
+
+```text
+project_part1_of_3.txt
+project_part2_of_3.txt
+project_part3_of_3.txt
+```
+
+Splitting happens **between complete files**.
+
+A source file or PDF is never intentionally divided between two output parts.
+
+### Custom chunk size
+
+```bash
+python -m app.cli . --max-chunk-chars 100000
+```
+
+### ChatGPT‑oriented preset
+
+```bash
+python -m app.cli . --chunk-for chatgpt
+```
+
+### Claude‑oriented preset
+
+```bash
+python -m app.cli . --chunk-for claude
+```
+
+These presets are conservative sizing helpers rather than guarantees of current platform limits.
+
+---
+
+# 🧮 Context sizing
+
+Every completed dump reports:
+
+* Character count
+* Output size
+* Approximate token count
+* Processing time
+* Source‑file count
+* PDF‑file count
+* Skipped/warning count
+
+Token estimation uses a simple model‑independent heuristic:
+
+```text
+estimated tokens ≈ characters / 4
+```
+
+This is intentionally approximate.
+
+Actual token counts vary significantly between models, tokenizers, programming languages, and non‑Latin text.
+
+Use the estimate for planning rather than as an exact tokenizer result.
+
+---
+
+# 🛡️ Defensive filesystem handling
+
+Project Context Dumper is designed to operate on real‑world repositories rather than assuming every file and directory is perfectly accessible.
+
+The scanner handles cases such as:
+
+### Symlink cycles
+
+A directory symlink pointing back toward an ancestor is detected using resolved paths instead of causing infinite traversal.
+
+### Broken symlinks
+
+Dangling symlinks are detected and reported.
+
+### Permission‑denied directories
+
+A protected subtree can be skipped while scanning continues elsewhere.
+
+### Disappearing files
+
+Filesystem changes occurring during a scan are handled defensively.
+
+### Deep directory structures
+
+Scanning uses an iterative stack rather than recursive Python calls, avoiding Python recursion‑limit failures.
+
+### Binary files
+
+Files with source‑like extensions are sniffed before being treated as text.
+
+### Oversized files
+
+Individual source and PDF size limits prevent unexpectedly large files from consuming excessive resources.
+
+---
+
+# 🔤 Encoding support
+
+Source files are decoded using a best‑effort strategy.
+
+The decoding pipeline is:
+
+```text
+UTF-8
+   ↓
+UTF-8 with BOM
+   ↓
+charset-normalizer (when installed)
+   ↓
+UTF-8 with replacement characters
+```
+
+Fallbacks are annotated so it is possible to identify files whose contents may not have been decoded perfectly.
+
+---
+
+# 🚫 Smart exclusions
+
+The default configuration avoids common directories and files that usually add little value to an AI context dump.
+
+Examples include:
+
+```text
+.git
+node_modules
+venv
+.venv
+__pycache__
+dist
+build
+target
+bin
+obj
+vendor
+```
+
+Common lockfiles are also excluded by default, including:
+
+```text
+package-lock.json
+yarn.lock
+poetry.lock
+Cargo.lock
+```
+
+All exclusions can be customized through the **interactive Settings page** – simply check or uncheck items in the lists.
+
+---
+
+# 👻 Hidden files
+
+Hidden files and directories are excluded by default.
+
+Certain useful project metadata files remain available through the configured special‑filename rules.
+
+Hidden‑file handling can be changed through the application settings or CLI configuration.
+
+---
+
+# ⚙️ Configuration
+
+Settings are stored as JSON in the platform‑appropriate configuration directory.
+
+### Windows
+
+```text
+%APPDATA%\ProjectContextDumper\config.json
+```
+
+### macOS
+
+```text
+~/Library/Application Support/ProjectContextDumper/config.json
+```
+
+### Linux
+
+```text
+~/.config/project-context-dumper/config.json
+```
+
+Configuration can be modified through the GUI's **Settings page** or supplied explicitly to the CLI:
+
+```bash
+python -m app.cli /path/to/project --config path/to/config.json
+```
+
+Configurable fields include:
+
+```text
+excluded_dirs
+include_ext
+special_filenames
+excluded_filenames
+output_glob_patterns
+include_hidden
+follow_symlinks
+max_file_size_bytes
+max_pdf_size_bytes
+binary_sniff_bytes
+max_depth
+use_charset_normalizer
+max_chunk_chars
+```
+
+---
+
+# 🛑 Cancellation and failure safety
+
+Processing is cooperative rather than forcibly terminated.
+
+The application uses a cancellation event that is checked during processing.
+
+When cancellation occurs:
+
+1. Processing stops at a safe boundary.
+2. Temporary output files are cleaned up.
+3. No incomplete temporary output is presented as a completed result.
+4. The GUI reports the operation as cancelled.
+5. The CLI reports the operation as cancelled.
+
+The GUI also waits for its worker thread to finish when the application is closed during processing.
+
+---
+
+# 🔒 Output protection
+
+Existing output files are not overwritten by default.
+
+For the CLI, explicitly request overwrite:
+
+```bash
+python -m app.cli . -o context.txt --overwrite
+```
+
+The GUI asks for confirmation before replacing existing output.
+
+Output is initially written to temporary files and finalized only after successful processing.
+
+---
+
+# 📊 Architecture
+
+The project deliberately separates scanning, dumping, orchestration, output management, and presentation.
+
+```text
+                         ┌─────────────────────┐
+                         │      GUI / CLI       │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │     dumper.py       │
+                         │   run_dump() API    │
+                         └──────────┬──────────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    ▼               ▼               ▼
+             ┌────────────┐ ┌─────────────┐ ┌──────────────┐
+             │  detector  │ │source_dumper│ │ pdf_dumper   │
+             │            │ │             │ │              │
+             │ filesystem │ │ source text │ │ PDF text     │
+             │ discovery  │ │ extraction  │ │ extraction   │
+             └────────────┘ └──────┬──────┘ └──────┬───────┘
+                                   │               │
+                                   └───────┬───────┘
+                                           ▼
+                                  ┌─────────────────┐
+                                  │ output_writer   │
+                                  │ counting +      │
+                                  │ chunking +      │
+                                  │ finalization    │
+                                  └─────────────────┘
+```
+
+The GUI and CLI share the same core dumping engine.
+
+This keeps application logic out of the presentation layer and makes the core functionality reusable from scripts and other frontends.
+
+---
+
+# 📁 Project Structure
+
+```text
+project_context_dumper/
+│
+├── main.py
+├── pytest.ini
+├── README.md
+├── requirements.txt
+├── requirements-dev.txt
+├── requirements-optional.txt
+├── app_icon.png
+│
+├── app/
+│   ├── __init__.py
+│   ├── cli.py
+│   ├── config.py
+│   ├── detector.py
+│   ├── dumper.py
+│   ├── gui.py
+│   ├── output_writer.py
+│   ├── pdf_dumper.py
+│   ├── source_dumper.py
+│   ├── theme.py
+│   └── worker.py
+│
+└── tests/
+    ├── conftest.py
+    ├── test_cli.py
+    ├── test_config.py
+    ├── test_detector.py
+    ├── test_dumper_integration.py
+    ├── test_output_writer.py
+    ├── test_pdf_dumper.py
+    └── test_source_dumper.py
+```
+
+---
+
+# 🧰 Installation
+
+## Requirements
+
+* Python **3.9+**
+* PySide6
+* pdfplumber
+
+Create a virtual environment:
+
+### Windows
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+### macOS / Linux
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Install runtime dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+For improved detection of non‑UTF‑8 source files:
+
+```bash
+pip install -r requirements-optional.txt
+```
+
+---
+
+# ▶️ Running
+
+## GUI
+
+```bash
+python main.py
+```
+
+The desktop application opens with the project selection interface.
+
+You can select a directory using the folder picker or drag a supported project directory onto the drop area.
+
+---
+
+## CLI
+
+```bash
+python -m app.cli /path/to/project
+```
+
+Example:
+
+```bash
+python -m app.cli "C:\Projects\MyApplication"
+```
+
+---
+
+# 🧪 Testing
+
+Install development dependencies:
 
 ```bash
 pip install -r requirements-dev.txt
+```
+
+Run the complete test suite:
+
+```bash
 pytest -v
 ```
 
-79 tests, well under a second, covering config persistence, the scanner,
-both dumpers, the chunked/atomic output writer, the orchestrator (mode
-resolution, cancellation, overwrite protection, chunking), and the CLI
-(including `--stdout` and chunk presets). GUI logic (drag-and-drop validation, settings
-round-trip, the full threaded run-and-cancel lifecycle) was additionally
-smoke-tested against a real `QApplication` using Qt's offscreen platform
-plugin (`QT_QPA_PLATFORM=offscreen`), including a full `app.exec()` start-to
--quit cycle to confirm clean thread teardown.
+The test suite covers the core scanner, configuration, source dumping, PDF processing, output writer, orchestration, and CLI behavior.
 
-## Configuration
+The project also includes tests for real‑world filesystem conditions such as:
 
-Settings are stored as JSON at the OS-appropriate location
-(`~/.config/project-context-dumper/config.json` on Linux,
-`~/Library/Application Support/ProjectContextDumper/config.json` on macOS,
-`%APPDATA%\ProjectContextDumper\config.json` on Windows) and are editable
-either through the GUI's Settings dialog or by passing `--config path.json`
-to the CLI. Fields: `excluded_dirs`, `include_ext`, `special_filenames`,
-`excluded_filenames`, `output_glob_patterns`, `include_hidden`,
-`follow_symlinks`, `max_file_size_bytes`, `max_pdf_size_bytes`,
-`binary_sniff_bytes`, `max_depth`, `use_charset_normalizer`,
-`max_chunk_chars`.
+* Symlink loops
+* Permission‑denied directories
+* Corrupt PDFs
+* Non‑UTF‑8 source files
+* Cancellation
+* Output overwrite protection
+* Chunked output
+* CLI stdout behavior
 
-## Sizing output for chat/context limits
+GUI behavior is additionally smoke‑tested using Qt's offscreen platform.
 
-Every summary (GUI and CLI) now reports a character count and a rough,
-model-agnostic token estimate (`chars / 4`, a common heuristic — real
-tokenizers vary, especially for code and non-Latin text, so treat it as a
-ballpark for sizing against a context window, not an exact count).
+For headless GUI testing:
 
-**Piping straight into another tool or clipboard (CLI):**
 ```bash
-python -m app.cli . --stdout | pbcopy                       # macOS
-python -m app.cli . --stdout | clip                         # Windows
-python -m app.cli . --stdout | xclip -selection clipboard   # Linux
-python -m app.cli . --stdout > /tmp/context.txt              # or just redirect
+QT_QPA_PLATFORM=offscreen pytest -v
 ```
-In `--stdout` mode, *only* the dump content goes to stdout — all progress
-and summary output moves to stderr, so the pipe stays clean. Nothing is
-written to the project directory either. (`--stdout` can't be combined with
-chunking below — pick one output shape.)
 
-**Copy to clipboard (GUI):** a "Copy to Clipboard" button appears after a
-run completes, enabled whenever the result is a single file.
+---
 
-**Splitting output that's too big to paste in one go:**
+# 📦 Building a Standalone Application
+
+PyInstaller can be used to package Project Context Dumper as a standalone desktop application.
+
+Install PyInstaller:
+
 ```bash
-python -m app.cli . --max-chunk-chars 100000              # custom size
-python -m app.cli . --chunk-for chatgpt                     # rough preset, ~100k chars
-python -m app.cli . --chunk-for claude                       # rough preset, ~350k chars
+pip install pyinstaller
 ```
-This produces `name_part1_of_3.txt`, `name_part2_of_3.txt`, etc. Splitting
-only ever happens *between* whole files — a single file's content is never
-divided across two parts, so a part may run a little over the target size
-if it ends on a large file. The same option is available in the GUI's
-Settings dialog, with the same two presets. Presets are deliberately
-conservative starting points, not guaranteed platform limits, since those
-change over time — check the platform's current limit if it matters.
 
+A basic Windows build can be created with:
 
-## Known limitations / possible future work
+```bash
+pyinstaller --noconfirm --windowed --name ProjectContextDumper main.py
+```
 
-- No `.gitignore`-aware filtering (uses its own exclude list instead).
-- No password-prompt flow for encrypted PDFs (reported as skipped instead).
-- No OCR fallback for scanned/image-only PDF pages (reported as
-  "no extractable text" instead — wiring in an OCR engine would be a
-  reasonable extension).
-- No resume-from-checkpoint for cancelled runs on extremely large trees.
+The generated application will be placed under:
 
-## About
+```text
+dist/
+```
 
-Project Context Dumper is developed by **Chipu_Data_Labs**. The same
-information is available in the app under Help → About.
+For production releases, a dedicated PyInstaller `.spec` file is recommended so application metadata, icons, resources, and hidden imports can be controlled explicitly.
 
+---
+
+# ⚠️ Known Limitations
+
+The current release intentionally has several limitations.
+
+### `.gitignore` awareness
+
+Project Context Dumper currently uses its own configurable exclusion system rather than interpreting `.gitignore` rules.
+
+### OCR
+
+Scanned/image‑only PDF pages do not currently undergo OCR.
+
+They are reported as having no extractable text.
+
+### Encrypted PDFs
+
+There is no password‑prompt workflow. Password‑protected PDFs are reported as skipped/errors.
+
+### Resume support
+
+Cancelled operations cannot currently resume from a previously completed checkpoint.
+
+### Token estimation
+
+The token count is a heuristic rather than an exact model tokenizer result.
+
+---
+
+# 🛣️ Roadmap
+
+Potential future improvements include:
+
+* [ ] `.gitignore`-aware scanning
+* [ ] OCR support for scanned PDFs
+* [ ] PDF password handling
+* [ ] Resume interrupted dumps
+* [ ] Secret/credential detection and redaction
+* [ ] More configurable output templates
+* [ ] Model‑specific token estimation
+* [ ] Improved large‑PDF streaming
+* [ ] More advanced output transaction handling
+* [ ] Automatic project‑language detection
+* [ ] Git repository metadata
+* [ ] Additional export formats
+* [ ] Native installers for Windows, macOS, and Linux
+
+---
+
+# 🔐 Security & Privacy
+
+Project Context Dumper operates on files available on the local machine.
+
+It does **not** require uploading the project to a remote processing service.
+
+However, the application is designed to collect project contents, so users should review their configuration before processing sensitive repositories.
+
+In particular, avoid unintentionally including:
+
+```text
+.env
+credentials
+API keys
+private keys
+password files
+production configuration
+database exports
+personal data
+```
+
+Before sending generated context to an external AI service, always review the output for sensitive information.
+
+---
+
+# 🤝 Contributing
+
+Contributions, bug reports, and improvements are welcome.
+
+A good contribution workflow is:
+
+```bash
+git clone <repository-url>
+cd project_context_dumper
+
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+# macOS/Linux
+source .venv/bin/activate
+
+pip install -r requirements-dev.txt
+
+pytest -v
+```
+
+Before submitting a pull request:
+
+1. Keep changes focused.
+2. Add or update tests where appropriate.
+3. Preserve the shared GUI/CLI core architecture.
+4. Avoid introducing unnecessary dependencies.
+5. Verify the CLI still works independently of the GUI.
+6. Verify cancellation and error paths where relevant.
+
+---
+
+# 📄 Output Philosophy
+
+The generated document is intentionally plain UTF‑8 text.
+
+This makes it:
+
+* Easy to inspect
+* Easy to diff
+* Easy to archive
+* Easy to pipe into other tools
+* Easy to paste into AI assistants
+* Independent of proprietary document formats
+
+The goal is not to create another project archive format.
+
+The goal is to create a **portable project‑context artifact**.
+
+---
+
+# 💡 Typical Use Cases
+
+## AI-assisted development
+
+Generate context before asking an AI assistant to:
+
+* Understand an unfamiliar codebase
+* Diagnose a bug
+* Refactor an application
+* Review architecture
+* Write tests
+* Explain legacy code
+* Implement a new feature
+
+Example:
+
+```bash
+python -m app.cli ./my-project --chunk-for chatgpt
+```
+
+---
+
+## Code review
+
+Create a point‑in‑time snapshot:
+
+```bash
+python -m app.cli ./my-project -o review_context.txt
+```
+
+The resulting file can be archived alongside a commit or release.
+
+---
+
+## Documentation review
+
+Combine source code with PDF documentation:
+
+```bash
+python -m app.cli ./my-project --mode auto
+```
+
+With `Auto Detect`, if the project contains both source and PDFs, both are included.
+
+---
+
+## Automation
+
+Because the core engine is available through the CLI, it can be integrated into scripts and CI pipelines.
+
+```bash
+python -m app.cli ./project --stdout > context.txt
+```
+
+---
+
+# 👨‍💻 About
+
+**Project Context Dumper** is developed by **Chipu_Data_Labs**.
+
+* **Version:** 1.0.0
+* **Developer:** Chipu_Data_Labs
+* **Contact Email:** 2012peter.c@gmail.com
+* **Contact Phone:** +265881050865
+* **Copyright:** © 2026 Chipu_Data_Labs. All rights reserved.
+
+The project is intended to provide a practical bridge between ordinary project files and AI‑assisted development workflows.
+
+---
+
+## ⭐ Support the Project
+
+If Project Context Dumper is useful to you:
+
+* ⭐ Star the repository
+* 🐛 Report bugs
+* 💡 Suggest improvements
+* 🔧 Submit pull requests
+* 📢 Share it with other developers
+
+---
+## License
+
+© 2026 Chipu_Data_Labs. All rights reserved.
+
+This project is shared publicly for viewing and evaluation purposes only.  
+You may **not** modify, distribute, or sell this software or any derivative 
+work without explicit written permission from the copyright owner.
+
+For licensing inquiries, contact: **2012peter.c@gmail.com**

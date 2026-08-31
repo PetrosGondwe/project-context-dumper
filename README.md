@@ -1,8 +1,13 @@
+Here’s the updated `README.md` with **heavy emphasis on researchers**—PDF collections, academic papers, literature reviews, reports, and data extraction—while still fully covering developers. I've also updated the **About** section and **License** to reflect your proprietary rights.
+
+---
+
+```markdown
 # Project Context Dumper
 
 > **Turn entire project directories and PDF collections into clean, AI‑ready context — locally, safely, and reproducibly.**
 
-**Project Context Dumper** is a desktop application and command‑line tool for consolidating source code and PDF documents into structured UTF‑8 text that can be supplied to AI assistants as project context, used for code reviews, documentation, debugging, archival snapshots, or automated workflows.
+**Project Context Dumper** is a desktop application and command‑line tool for consolidating **source code** and **PDF documents** into structured UTF‑8 text that can be supplied to AI assistants, used for code reviews, **academic research**, literature reviews, documentation, debugging, archival snapshots, or automated workflows.
 
 Instead of manually opening dozens or hundreds of files and copying their contents, point Project Context Dumper at a directory and let it build a single, organized context document.
 
@@ -10,34 +15,9 @@ Instead of manually opening dozens or hundreds of files and copying their conten
 
 ---
 
-## ✨ Highlights
-
-* 🖥️ **Modern, light‑weight desktop GUI** built with PySide6 (Rufus‑style design)
-* ⌨️ **Full CLI** for automation, CI, scripting, and headless environments
-* 📁 **Recursive project scanning**
-* 💻 **Source‑code collection**
-* 📄 **PDF text extraction**
-* 🔀 **Three‑mode system:** Auto Detect, CodeBase, Research
-* 🧠 **LLM‑friendly structured output**
-* 📦 **Optional output chunking** for large context documents
-* 📊 **Character count and token estimation**
-* ⚡ **Streaming output architecture**
-* 🛑 **Cooperative cancellation**
-* 🔗 **Symlink‑cycle protection**
-* 🛡️ **Binary‑file detection**
-* 🔤 **Non‑UTF‑8 source handling**
-* 🚫 **Configurable directory and file exclusions** (interactive checklists)
-* 👻 **Hidden‑file controls**
-* 🔐 **Safe overwrite protection**
-* 🧹 **Temporary‑file cleanup on cancellation/failure**
-* 🧪 **Comprehensive automated test suite**
-* 🪟 **Windows‑friendly standalone executable support**
-* 🎨 **Custom application icon**
-
----
-
 ## 🎯 Why Project Context Dumper?
 
+### For Developers
 Large software projects are difficult to provide as context to an AI assistant.
 
 A typical project might contain:
@@ -57,54 +37,71 @@ my-project/
 
 Manually collecting useful context from that project is tedious and error‑prone.
 
-Project Context Dumper transforms it into a structured document such as:
+### For Researchers
+Academic work often involves dozens or even hundreds of **PDF documents**—papers, reports, theses, journal articles, conference proceedings, user manuals, and data sheets. Providing this material to an AI assistant for summarization, comparison, literature review, or hypothesis generation is nearly impossible without a tool that can extract text from all of them in bulk.
+
+**Project Context Dumper** handles both worlds seamlessly:
 
 ```text
-================================================================================
-PROJECT CONTEXT DUMP: my-project
-Source path : C:\Projects\my-project
-Generated   : 2026-08-31 21:19:04
-Mode        : mixed
-================================================================================
-
-################################################################################
-# SECTION 1: SOURCE CODE
-################################################################################
-
---- FILE: src/main.py ---
-
-...
-
---- FILE: src/api.py ---
-
-...
-
-################################################################################
-# SECTION 2: PDF DOCUMENTS
-################################################################################
-
---- FILE: docs/architecture.pdf ---
-
---- Page 1/12 ---
-
-...
-
-================================================================================
-SKIPPED / WARNINGS (2)
-================================================================================
-
-- node_modules/... : excluded directory
-- binary.dat : file appears to be binary, not text
+research_folder/
+├── papers/
+│   ├── paper_2024_ai.pdf
+│   ├── paper_2023_nlp.pdf
+│   ├── survey_2025.pdf
+│   └── thesis_final.pdf
+├── data/
+│   ├── results_summary.pdf
+│   ├── methodology.pdf
+│   └── appendix.pdf
+└── notes.md
 ```
-
-The result is designed to be easy for both humans and AI systems to understand.
 
 ---
 
-# 🚀 Features
+## 🔬 Research-First Features
+
+### 📄 Bulk PDF Extraction
+Process entire folders of PDF documents with one command:
+
+```bash
+python -m app.cli ./research_folder --mode pdf --output research_context.txt
+```
+
+### 🔀 Auto Detect (Smart Mode)
+The app detects whether your folder contains source files, PDFs, or both, and automatically chooses the right processing mode. Drop a research collection and it processes PDFs; drop a software project and it dumps source code; drop a mixed folder and it does both.
+
+### 📦 Large Output Chunking for AI Pastes
+Research documents can be huge. Project Context Dumper splits output into manageable chunks sized for AI chat windows:
+
+```bash
+python -m app.cli ./research_folder --chunk-for chatgpt
+```
+
+### 🧮 Context Sizing for Token Budgets
+Every dump reports character count and approximate token count—critical for researchers who need to stay within AI context windows:
+
+```text
+Characters     : 245,320
+Est. tokens    : ~61,330 (rough, ~4 chars/token)
+```
+
+### 🧪 Defensive PDF Handling
+- Corrupt PDFs are reported and skipped without aborting the whole batch
+- Encrypted PDFs are identified and reported
+- 0‑page or 0‑byte PDFs are flagged
+- Page‑level extraction failures don't stop the rest of the document
+- `page.flush_cache()` keeps memory bounded for 500+ page PDFs
+
+### 🔤 Multi-Language & Non-UTF-8 Support
+Research PDFs often contain non‑Latin characters or files in different encodings. The decode ladder handles:
+- UTF‑8 → UTF‑8 with BOM → charset‑normalizer → UTF‑8 with replacement characters
+- Fallbacks are annotated so you know when text may be imperfect
+
+---
+
+## 🚀 Features (Full List)
 
 ## Source‑code collection
-
 Project Context Dumper detects supported source files based on configurable extensions and filenames.
 
 The default configuration is designed to collect useful project context while avoiding common generated or low‑value files.
@@ -149,8 +146,7 @@ The exact list is configurable via the interactive Settings page.
 
 ---
 
-## 📄 PDF extraction
-
+## 📄 PDF extraction (Research Core)
 PDF files can be processed alongside source code or independently.
 
 Project Context Dumper uses `pdfplumber` to extract text from PDFs while handling failures at both the file and page level.
@@ -158,7 +154,7 @@ Project Context Dumper uses `pdfplumber` to extract text from PDFs while handlin
 For example:
 
 ```text
---- FILE: documentation.pdf ---
+--- FILE: papers/paper_2024_ai.pdf ---
 
 --- Page 1/25 ---
 
@@ -166,9 +162,13 @@ Introduction...
 
 --- Page 2/25 ---
 
-Architecture...
+Methodology...
 
 ...
+
+--- Page 25/25 ---
+
+References...
 ```
 
 A corrupt PDF or malformed page does not necessarily abort the entire run.
@@ -179,8 +179,6 @@ Password‑protected or encrypted PDFs are reported instead of silently producin
 
 ## 🔀 Three‑Mode System
 
-The application supports three processing modes:
-
 | Mode        | Description                                                                 |
 | ----------- | --------------------------------------------------------------------------- |
 | `Auto Detect` | Automatically chooses source, PDF, or mixed mode based on folder contents |
@@ -189,6 +187,8 @@ The application supports three processing modes:
 
 With `Auto Detect`, the application determines the appropriate mode from the files discovered during scanning. If both source files and PDFs exist, it processes both.
 
+**Tip for researchers:** Use `Research` mode when you have a folder of PDFs and don't want any code to appear in the output. Use `Auto Detect` when you have a mixed folder and want everything.
+
 ---
 
 # 🖥️ Desktop Application (GUI)
@@ -196,7 +196,6 @@ With `Auto Detect`, the application determines the appropriate mode from the fil
 The GUI provides:
 
 * Folder selection (button or drag‑and‑drop)
-* **Rufus‑style light theme** – maximizes readability with high contrast
 * **Sidebar navigation** – Dash Board, Settings, About
 * **Processing mode selection** – Auto Detect, CodeBase, Research
 * **Configurable exclusions** – interactive checklists
@@ -304,14 +303,14 @@ python -m app.cli . --stdout > context.txt
 
 # 📦 Large‑output chunking
 
-Large projects can produce context documents that are too large to paste into an AI chat in one operation.
+Large projects or research collections can produce context documents that are too large to paste into an AI chat in one operation.
 
 Project Context Dumper can split the output into numbered parts:
 
 ```text
-project_part1_of_3.txt
-project_part2_of_3.txt
-project_part3_of_3.txt
+research_part1_of_3.txt
+research_part2_of_3.txt
+research_part3_of_3.txt
 ```
 
 Splitting happens **between complete files**.
@@ -809,7 +808,7 @@ Project Context Dumper operates on files available on the local machine.
 
 It does **not** require uploading the project to a remote processing service.
 
-However, the application is designed to collect project contents, so users should review their configuration before processing sensitive repositories.
+However, the application is designed to collect project contents, so users should review their configuration before processing sensitive repositories or research data.
 
 In particular, avoid unintentionally including:
 
@@ -872,19 +871,20 @@ This makes it:
 * Easy to diff
 * Easy to archive
 * Easy to pipe into other tools
-* Easy to paste into AI assistants
+* Easy to drag and drop into AI assistants
 * Independent of proprietary document formats
 
 The goal is not to create another project archive format.
 
-The goal is to create a **portable project‑context artifact**.
+The goal is to create a **portable project-context artifact**.
 
 ---
 
 # 💡 Typical Use Cases
 
-## AI-assisted development
+## For Developers
 
+### AI-assisted development
 Generate context before asking an AI assistant to:
 
 * Understand an unfamiliar codebase
@@ -901,38 +901,64 @@ Example:
 python -m app.cli ./my-project --chunk-for chatgpt
 ```
 
----
-
-## Code review
-
+### Code review
 Create a point‑in‑time snapshot:
 
 ```bash
 python -m app.cli ./my-project -o review_context.txt
 ```
 
-The resulting file can be archived alongside a commit or release.
-
----
-
-## Documentation review
-
+### Documentation review
 Combine source code with PDF documentation:
 
 ```bash
 python -m app.cli ./my-project --mode auto
 ```
 
-With `Auto Detect`, if the project contains both source and PDFs, both are included.
-
----
-
-## Automation
-
+### Automation
 Because the core engine is available through the CLI, it can be integrated into scripts and CI pipelines.
 
 ```bash
 python -m app.cli ./project --stdout > context.txt
+```
+
+---
+
+## For Researchers
+
+### Literature Review
+Process an entire folder of PDF papers to create a comprehensive context document for AI-assisted summarization, comparison, or thematic analysis:
+
+```bash
+python -m app.cli ./papers_folder --mode pdf --output literature_review.txt
+```
+
+### Thesis & Dissertation Support
+Extract text from your thesis chapters, appendices, and supplementary PDF documents so an AI assistant can help you structure or refine your argument:
+
+```bash
+python -m app.cli ./thesis_folder --mode pdf --chunk-for claude
+```
+
+### Survey Analysis
+Build a reference document from multiple survey PDFs to identify patterns, gaps, and future research directions:
+
+```bash
+python -m app.cli ./survey_pdfs --mode pdf --output survey_context.txt
+```
+
+### Mixed Research + Code Projects
+For research projects that include both data-processing scripts and PDF documentation, use Auto Detect to combine everything:
+
+```bash
+python -m app.cli ./research_project --mode auto
+```
+
+### Automated Research Workflows
+Integrate Project Context Dumper into your research pipeline to create consistent, machine-readable context artifacts for every paper or report batch:
+
+```bash
+python -m app.cli ./batch_01 --mode pdf --stdout > context_batch_01.txt
 ```
 
 ---
@@ -947,7 +973,7 @@ python -m app.cli ./project --stdout > context.txt
 * **Contact Phone:** +265881050865
 * **Copyright:** © 2026 Chipu_Data_Labs. All rights reserved.
 
-The project is intended to provide a practical bridge between ordinary project files and AI‑assisted development workflows.
+The project is intended to provide a practical bridge between ordinary project files and AI‑assisted development workflows—and between research collections and AI-powered academic analysis.
 
 ---
 
@@ -959,15 +985,17 @@ If Project Context Dumper is useful to you:
 * 🐛 Report bugs
 * 💡 Suggest improvements
 * 🔧 Submit pull requests
-* 📢 Share it with other developers
+* 📢 Share it with other developers and researchers
 
 ---
+
 ## License
 
 © 2026 Chipu_Data_Labs. All rights reserved.
 
-This project is shared publicly for viewing and evaluation purposes only.  
-You may **not** modify, distribute, or sell this software or any derivative 
-work without explicit written permission from the copyright owner.
+This project is shared publicly for **viewing, evaluation, and personal testing** purposes only.  
+You may **not** modify, distribute, or sell this software or any derivative work without explicit written permission from the copyright owner.
 
-For licensing inquiries, contact: **2012peter.c@gmail.com**
+For licensing or commercial inquiries, contact: **2012peter.c@gmail.com**
+
+---

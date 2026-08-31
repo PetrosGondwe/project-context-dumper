@@ -1,0 +1,4 @@
+# Optional: improves encoding detection for non-UTF-8 source files.
+# The app works fine without this; it just falls back to a UTF-8 +
+# errors='replace' decode instead of proper encoding detection.
+charset-normalizer>=3.0

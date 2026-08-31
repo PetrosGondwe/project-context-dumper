@@ -1,8 +1,3 @@
-Here’s the updated `README.md` with **heavy emphasis on researchers**—PDF collections, academic papers, literature reviews, reports, and data extraction—while still fully covering developers. I've also updated the **About** section and **License** to reflect your proprietary rights.
-
----
-
-```markdown
 # Project Context Dumper
 
 > **Turn entire project directories and PDF collections into clean, AI‑ready context — locally, safely, and reproducibly.**

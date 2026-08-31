@@ -1,10 +1,3 @@
-# Updated README.md
-
-Below is the complete, production‑ready `README.md` file. I've preserved the excellent structure from your draft, updated it to match the current state of the application (light Rufus‑style theme, sidebar navigation, three‑mode system, interactive settings, custom icon), and added appropriate screenshot placeholders.
-
----
-
-```markdown
 # Project Context Dumper
 
 > **Turn entire project directories and PDF collections into clean, AI‑ready context — locally, safely, and reproducibly.**

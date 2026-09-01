@@ -1,5 +1,7 @@
 # Project Context Dumper
 
+[![Latest Release](https://img.shields.io/github/v/release/PetrosGondwe/project-context-dumper)](https://github.com/PetrosGondwe/project-context-dumper/releases/latest)
+**[⬇️ Download the installer for Windows](https://github.com/PetrosGondwe/project-context-dumper/releases/latest/download/ProjectContextDumper_Setup.exe)**
 > **Turn entire project directories and PDF collections into clean, AI‑ready context — locally, safely, and reproducibly.**
 
 **Project Context Dumper** is a desktop application and command‑line tool for consolidating **source code** and **PDF documents** into structured UTF‑8 text that can be supplied to AI assistants, used for code reviews, **academic research**, literature reviews, documentation, debugging, archival snapshots, or automated workflows.
